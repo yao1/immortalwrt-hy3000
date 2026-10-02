@@ -199,7 +199,7 @@ jobs:
           CONFIG_PACKAGE_kmod-mt7915e=y
           CONFIG_PACKAGE_kmod-mt7981-firmware=y
           CONFIG_PACKAGE_mt7981-wo-firmware=y
-          CONFIG_PACKAGE_wpad-openssl=y
+          CONFIG_PACKAGE_wpad-basic-mbedtls=y
           CONFIG_TARGET_ROOTFS_PARTSIZE=512
           CONFIG_TARGET_ROOTFS_SQUASHFS=y
           EOF
@@ -209,7 +209,7 @@ jobs:
             luci-app-ttyd luci-app-openclash luci-app-passwall luci-app-wolplus
             luci-app-upnp luci-app-samba4 luci-app-vsftpd luci-app-zerotier
             luci-proto-wireguard luci-mod-network kmod-mt7915e
-            kmod-mt7981-firmware mt7981-wo-firmware wpad-openssl
+            kmod-mt7981-firmware mt7981-wo-firmware wpad-basic-mbedtls
           )
           for package in "${required_packages[@]}"; do
             if ! grep -qx "CONFIG_PACKAGE_${package}=y" .config; then
@@ -218,7 +218,7 @@ jobs:
             fi
           done
           echo "=== Key config ==="
-          grep -E "BTF|VETH|philips|ROOTFS|passwall|xray-core|sing-box|luci-mod-network|kmod-mt7915e|wpad-openssl" .config | head -30
+          grep -E "BTF|VETH|philips|ROOTFS|passwall|xray-core|sing-box|luci-mod-network|kmod-mt7915e|wpad-basic-mbedtls" .config | head -30
 
       - name: Download
         run: cd openwrt && make download -j$(nproc) && find dl -size -1024c -exec rm -f {} \;
