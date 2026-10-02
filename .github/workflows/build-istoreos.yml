@@ -48,6 +48,12 @@ jobs:
           git clone --depth=1 --branch v1.0.0-r4 https://github.com/sbwml/luci-app-diskman.git /tmp/luci-app-diskman
           mkdir -p package/new
           cp -a /tmp/luci-app-diskman/luci-app-diskman package/new/luci-app-diskman
+          git clone --depth=1 --filter=blob:none --sparse --branch openwrt-24.10 https://github.com/immortalwrt/luci.git /tmp/luci-legacy
+          git -C /tmp/luci-legacy sparse-checkout set applications/luci-app-vsftpd applications/luci-app-zerotier
+          for app in luci-app-vsftpd luci-app-zerotier; do
+            cp -a "/tmp/luci-legacy/applications/${app}" "package/new/${app}"
+            sed -i 's|include ../../luci.mk|include $(TOPDIR)/feeds/luci/luci.mk|' "package/new/${app}/Makefile"
+          done
           git clone --depth=1 https://github.com/vernesong/OpenClash.git /tmp/OpenClash
           cp -a /tmp/OpenClash/luci-app-openclash package/luci-app-openclash
 
@@ -163,7 +169,7 @@ jobs:
           CONFIG_PACKAGE_luci-app-samba4=y
           CONFIG_PACKAGE_luci-app-vsftpd=y
           CONFIG_PACKAGE_luci-app-zerotier=y
-          CONFIG_PACKAGE_luci-app-wireguard=y
+          CONFIG_PACKAGE_luci-proto-wireguard=y
           CONFIG_PACKAGE_qrencode=y
           CONFIG_PACKAGE_coremark=y
           CONFIG_PACKAGE_vim-full=y
@@ -202,7 +208,7 @@ jobs:
             luci-theme-argon luci-app-oaf luci-app-dockerman luci-app-diskman
             luci-app-ttyd luci-app-openclash luci-app-passwall luci-app-wolplus
             luci-app-upnp luci-app-samba4 luci-app-vsftpd luci-app-zerotier
-            luci-app-wireguard luci-mod-network kmod-mt7915e
+            luci-proto-wireguard luci-mod-network kmod-mt7915e
             kmod-mt7981-firmware mt7981-wo-firmware wpad-openssl
           )
           for package in "${required_packages[@]}"; do
