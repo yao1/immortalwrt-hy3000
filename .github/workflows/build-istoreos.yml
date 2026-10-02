@@ -42,9 +42,12 @@ jobs:
       - name: Add legacy plugin sources
         run: |
           cd openwrt
-          git clone --depth=1 https://github.com/jerrykuku/luci-theme-argon.git package/luci-theme-argon
+          git clone --depth=1 --branch v2.3.2 https://github.com/jerrykuku/luci-theme-argon.git package/luci-theme-argon
           git clone --depth=1 https://github.com/destan19/OpenAppFilter.git package/OpenAppFilter
           git clone --depth=1 https://github.com/animegasan/luci-app-wolplus.git package/luci-app-wolplus
+          git clone --depth=1 --branch v1.0.0-r4 https://github.com/sbwml/luci-app-diskman.git /tmp/luci-app-diskman
+          mkdir -p package/new
+          cp -a /tmp/luci-app-diskman/luci-app-diskman package/new/luci-app-diskman
           git clone --depth=1 https://github.com/vernesong/OpenClash.git /tmp/OpenClash
           cp -a /tmp/OpenClash/luci-app-openclash package/luci-app-openclash
 
