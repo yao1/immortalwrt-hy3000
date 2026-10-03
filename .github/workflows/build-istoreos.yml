@@ -164,6 +164,8 @@ jobs:
           CONFIG_PACKAGE_luci-app-ttyd=y
           CONFIG_PACKAGE_luci-app-openclash=y
           CONFIG_PACKAGE_luci-app-passwall=y
+          # Geoview 0.2.6 requires Go 1.25, newer than the iStoreOS 24.10 toolchain.
+          # CONFIG_PACKAGE_luci-app-passwall_INCLUDE_Geoview is not set
           CONFIG_PACKAGE_luci-app-wolplus=y
           CONFIG_PACKAGE_luci-app-upnp=y
           CONFIG_PACKAGE_luci-app-samba4=y
@@ -217,6 +219,10 @@ jobs:
               exit 1
             fi
           done
+          if grep -qx 'CONFIG_PACKAGE_luci-app-passwall_INCLUDE_Geoview=y' .config; then
+            echo "ERROR: optional Passwall Geoview requires Go 1.25 and is incompatible with the iStoreOS 24.10 toolchain"
+            exit 1
+          fi
           echo "=== Key config ==="
           grep -E "BTF|VETH|philips|ROOTFS|passwall|xray-core|sing-box|luci-mod-network|kmod-mt7915e|wpad-basic-mbedtls" .config | head -30
 
