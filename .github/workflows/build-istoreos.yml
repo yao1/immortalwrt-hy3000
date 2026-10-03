@@ -164,8 +164,11 @@ jobs:
           CONFIG_PACKAGE_luci-app-ttyd=y
           CONFIG_PACKAGE_luci-app-openclash=y
           CONFIG_PACKAGE_luci-app-passwall=y
-          # Geoview 0.2.6 requires Go 1.25, newer than the iStoreOS 24.10 toolchain.
+          # These Passwall optional backends require Go newer than iStoreOS 24.10's Go 1.23.12.
           # CONFIG_PACKAGE_luci-app-passwall_INCLUDE_Geoview is not set
+          # CONFIG_PACKAGE_luci-app-passwall_INCLUDE_V2ray_Plugin is not set
+          # CONFIG_PACKAGE_luci-app-passwall_INCLUDE_SingBox is not set
+          # CONFIG_PACKAGE_luci-app-passwall_INCLUDE_Xray is not set
           CONFIG_PACKAGE_luci-app-wolplus=y
           CONFIG_PACKAGE_luci-app-upnp=y
           CONFIG_PACKAGE_luci-app-samba4=y
@@ -219,10 +222,16 @@ jobs:
               exit 1
             fi
           done
-          if grep -qx 'CONFIG_PACKAGE_luci-app-passwall_INCLUDE_Geoview=y' .config; then
-            echo "ERROR: optional Passwall Geoview requires Go 1.25 and is incompatible with the iStoreOS 24.10 toolchain"
-            exit 1
-          fi
+          optional_go_backends=(
+            Geoview V2ray_Plugin SingBox Xray
+          )
+          for backend in "${optional_go_backends[@]}"; do
+            symbol="CONFIG_PACKAGE_luci-app-passwall_INCLUDE_${backend}"
+            if grep -qx "${symbol}=y" .config; then
+              echo "ERROR: ${symbol} requires a newer Go toolchain than iStoreOS 24.10 provides"
+              exit 1
+            fi
+          done
           echo "=== Key config ==="
           grep -E "BTF|VETH|philips|ROOTFS|passwall|xray-core|sing-box|luci-mod-network|kmod-mt7915e|wpad-basic-mbedtls" .config | head -30
 
