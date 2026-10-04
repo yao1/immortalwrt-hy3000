@@ -39,6 +39,34 @@ jobs:
           echo "Commit: $(git log --oneline -1)"
           echo "Kernel: $(cat include/kernel-6.6)"
 
+      - name: Add legacy plugin sources
+        run: |
+          cd openwrt
+          git clone --depth=1 --branch v2.3.2 https://github.com/jerrykuku/luci-theme-argon.git package/luci-theme-argon
+          git clone --depth=1 https://github.com/destan19/OpenAppFilter.git package/OpenAppFilter
+          git clone --depth=1 https://github.com/animegasan/luci-app-wolplus.git package/luci-app-wolplus
+          git clone --depth=1 --branch v1.0.0-r4 https://github.com/sbwml/luci-app-diskman.git /tmp/luci-app-diskman
+          mkdir -p package/new
+          cp -a /tmp/luci-app-diskman/luci-app-diskman package/new/luci-app-diskman
+          git clone --depth=1 --filter=blob:none --sparse --branch openwrt-24.10 https://github.com/immortalwrt/luci.git /tmp/luci-legacy
+          git -C /tmp/luci-legacy sparse-checkout set applications/luci-app-vsftpd applications/luci-app-zerotier
+          for app in luci-app-vsftpd luci-app-zerotier; do
+            cp -a "/tmp/luci-legacy/applications/${app}" "package/new/${app}"
+            sed -i 's|include ../../luci.mk|include $(TOPDIR)/feeds/luci/luci.mk|' "package/new/${app}/Makefile"
+          done
+          git clone --depth=1 https://github.com/vernesong/OpenClash.git /tmp/OpenClash
+          cp -a /tmp/OpenClash/luci-app-openclash package/luci-app-openclash
+
+      - name: Add Passwall feeds
+        run: |
+          cd openwrt
+          {
+            grep -q '^src-git passwall_packages ' feeds.conf.default || printf '%s\n' 'src-git passwall_packages https://github.com/Openwrt-Passwall/openwrt-passwall-packages.git;main'
+            grep -q '^src-git passwall_luci ' feeds.conf.default || printf '%s\n' 'src-git passwall_luci https://github.com/Openwrt-Passwall/openwrt-passwall.git;main'
+            cat feeds.conf.default
+          } > /tmp/feeds.conf.default
+          mv /tmp/feeds.conf.default feeds.conf.default
+
       - name: Add HY3000 device support
         run: |
           cd openwrt
@@ -98,6 +126,15 @@ jobs:
           ./scripts/feeds update -a
           ./scripts/feeds install -a
 
+      - name: Add OpenClash Meta core
+        run: |
+          cd openwrt
+          rm -rf feeds/packages/net/open-app-filter
+          curl -fL --retry 2 https://raw.githubusercontent.com/vernesong/OpenClash/core/master/meta/clash-linux-arm64.tar.gz -o /tmp/clash.tar.gz
+          tar -xzf /tmp/clash.tar.gz -C /tmp
+          install -Dm755 /tmp/clash package/luci-app-openclash/root/etc/openclash/core/clash_meta
+          rm -f /tmp/clash.tar.gz /tmp/clash
+
       - name: Write config
         run: |
           cd openwrt
@@ -118,7 +155,44 @@ jobs:
           CONFIG_PACKAGE_kmod-xdp-sockets-diag=y
           CONFIG_PACKAGE_kmod-veth=y
           CONFIG_PACKAGE_luci=y
+          CONFIG_PACKAGE_luci-mod-network=y
           CONFIG_PACKAGE_luci-i18n-base-zh-cn=y
+          CONFIG_PACKAGE_luci-theme-argon=y
+          CONFIG_PACKAGE_luci-app-oaf=y
+          CONFIG_PACKAGE_luci-app-dockerman=y
+          CONFIG_PACKAGE_luci-app-diskman=y
+          CONFIG_PACKAGE_luci-app-ttyd=y
+          CONFIG_PACKAGE_luci-app-openclash=y
+          CONFIG_PACKAGE_luci-app-passwall=y
+          # These Passwall optional backends require newer toolchains than iStoreOS 24.10 provides.
+          # CONFIG_PACKAGE_luci-app-passwall_INCLUDE_Geoview is not set
+          # CONFIG_PACKAGE_luci-app-passwall_INCLUDE_V2ray_Plugin is not set
+          # CONFIG_PACKAGE_luci-app-passwall_INCLUDE_SingBox is not set
+          # CONFIG_PACKAGE_luci-app-passwall_INCLUDE_Xray is not set
+          # CONFIG_PACKAGE_luci-app-passwall_INCLUDE_Shadowsocks_Rust_Client is not set
+          CONFIG_PACKAGE_luci-app-wolplus=y
+          CONFIG_PACKAGE_luci-app-upnp=y
+          CONFIG_PACKAGE_luci-app-samba4=y
+          CONFIG_PACKAGE_luci-app-vsftpd=y
+          CONFIG_PACKAGE_luci-app-zerotier=y
+          CONFIG_PACKAGE_luci-proto-wireguard=y
+          CONFIG_PACKAGE_qrencode=y
+          CONFIG_PACKAGE_coremark=y
+          CONFIG_PACKAGE_vim-full=y
+          CONFIG_PACKAGE_zsh=y
+          CONFIG_PACKAGE_gdisk=y
+          CONFIG_PACKAGE_sgdisk=y
+          CONFIG_PACKAGE_kmod-fuse=y
+          CONFIG_PACKAGE_kmod-dm=y
+          CONFIG_PACKAGE_kmod-br-netfilter=y
+          CONFIG_PACKAGE_kmod-ikconfig=y
+          CONFIG_PACKAGE_kmod-nf-ipvs=y
+          CONFIG_PACKAGE_kmod-fs-ext4=y
+          CONFIG_PACKAGE_kmod-fs-f2fs=y
+          CONFIG_PACKAGE_e2fsprogs=y
+          CONFIG_PACKAGE_f2fs-tools=y
+          CONFIG_PACKAGE_lsblk=y
+          CONFIG_PACKAGE_mmc-utils=y
           CONFIG_PACKAGE_htop=y
           CONFIG_PACKAGE_curl=y
           CONFIG_PACKAGE_wget-ssl=y
@@ -131,13 +205,40 @@ jobs:
           CONFIG_PACKAGE_kmod-mt7915e=y
           CONFIG_PACKAGE_kmod-mt7981-firmware=y
           CONFIG_PACKAGE_mt7981-wo-firmware=y
-          CONFIG_PACKAGE_wpad-openssl=y
+          CONFIG_PACKAGE_wpad-basic-mbedtls=y
           CONFIG_TARGET_ROOTFS_PARTSIZE=512
           CONFIG_TARGET_ROOTFS_SQUASHFS=y
           EOF
           make defconfig
+          required_packages=(
+            luci-theme-argon luci-app-oaf luci-app-dockerman luci-app-diskman
+            luci-app-ttyd luci-app-openclash luci-app-passwall luci-app-wolplus
+            luci-app-upnp luci-app-samba4 luci-app-vsftpd luci-app-zerotier
+            luci-proto-wireguard luci-mod-network kmod-mt7915e
+            kmod-mt7981-firmware mt7981-wo-firmware wpad-basic-mbedtls
+          )
+          for package in "${required_packages[@]}"; do
+            if ! grep -qx "CONFIG_PACKAGE_${package}=y" .config; then
+              echo "ERROR: ${package} was not selected after make defconfig"
+              exit 1
+            fi
+          done
+          optional_go_backends=(
+            Geoview V2ray_Plugin SingBox Xray
+          )
+          for backend in "${optional_go_backends[@]}"; do
+            symbol="CONFIG_PACKAGE_luci-app-passwall_INCLUDE_${backend}"
+            if grep -qx "${symbol}=y" .config; then
+              echo "ERROR: ${symbol} requires a newer Go toolchain than iStoreOS 24.10 provides"
+              exit 1
+            fi
+          done
+          if grep -qx 'CONFIG_PACKAGE_luci-app-passwall_INCLUDE_Shadowsocks_Rust_Client=y' .config; then
+            echo "ERROR: Passwall Shadowsocks Rust client requires Rust 1.91; iStoreOS 24.10 provides Rust 1.90"
+            exit 1
+          fi
           echo "=== Key config ==="
-          grep -E "BTF|VETH|philips|ROOTFS" .config | head -20
+          grep -E "BTF|VETH|philips|ROOTFS|passwall|xray-core|sing-box|luci-mod-network|kmod-mt7915e|wpad-basic-mbedtls" .config | head -30
 
       - name: Download
         run: cd openwrt && make download -j$(nproc) && find dl -size -1024c -exec rm -f {} \;
